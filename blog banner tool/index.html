@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Banner Maker</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f8f9fb;
+      margin: 0;
+      padding: 30px;
+      color: #333;
+    }
+
+    h2 {
+      text-align: center;
+      color: #222;
+      margin-bottom: 20px;
+    }
+
+    .controls {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 850px;
+      margin: 0 auto 25px auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .controls label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 14px;
+      text-align: left;
+    }
+
+    .controls input[type="file"],
+    .controls select,
+    .controls input[type="range"],
+    .controls input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .controls input[type="checkbox"] {
+      margin-right: 8px;
+      transform: scale(1.2);
+    }
+
+    .controls button {
+      grid-column: 1 / -1;
+      background: #ff7b00;
+      color: #fff;
+      font-size: 16px;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+      font-weight: bold;
+    }
+
+    .controls button:hover {
+      background: #e66900;
+    }
+
+    .drop-area {
+      grid-column: 1 / -1;
+      border: 2px dashed #bbb;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .drop-area.dragover {
+      border-color: #ff7b00;
+      background: #fff8f0;
+      color: #333;
+    }
+
+    .canvas-container {
+      text-align: center;
+    }
+
+    canvas {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      max-width: 100%;
+      height: auto;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    }
+
+    .size-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .size-control input[type="number"] {
+      max-width: 80px;
+    }
+  </style>
+</head>
+<body>
+  <h2>✨Blog Banner Maker Tool</h2>
+
+  <div class="controls">
+    <div class="drop-area" id="dropArea">
+      📂 Drag & Drop your Banner here or click to upload
+      <input type="file" id="bannerUpload" accept="image/*" hidden>
+    </div>
+
+    <div>
+      <label>Choose Logo:</label>
+      <select id="logoSelect">
+        <option value="logos/debt-helper-logo.png">Debt Helper</option>
+        <option value="logos/nt-logo.png">NT</option>
+        <option value="logos/sos-logo.png">SOS</option>
+        <option value="logos/amin-white.png">Amin White</option>
+        <option value="logos/amin-black.png">Amin Black</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Position:</label>
+      <select id="cornerSelect">
+        <option value="top-left">Top Left</option>
+        <option value="top-middle">Top Middle</option>
+        <option value="top-right">Top Right</option>
+        <option value="bottom-left">Bottom Left</option>
+        <option value="bottom-right">Bottom Right</option>
+      </select>
+    </div>
+
+    <div>
+      <label><input type="checkbox" id="whiteBg"> Add White Background</label>
+    </div>
+
+    <div>
+      <label>Logo Size:</label>
+      <div class="size-control">
+        <input type="range" id="logoSize" min="100" max="600" value="300">
+        <input type="number" id="logoSizeNumber" min="100" max="600" value="300">
+      </div>
+    </div>
+
+    <button id="downloadBtn">⬇️ Download Banner</button>
+  </div>
+
+  <div class="canvas-container">
+    <canvas id="canvas" width="2240" height="1260"></canvas>
+  </div>
+  <footer style="text-align:center; margin-top:20px; color:#888; font-size:20px;">
+    Made by DMT
+  </footer>
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const bannerUpload = document.getElementById("bannerUpload");
+    const dropArea = document.getElementById("dropArea");
+    const logoSelect = document.getElementById("logoSelect");
+    const cornerSelect = document.getElementById("cornerSelect");
+    const whiteBgCheckbox = document.getElementById("whiteBg");
+    const logoSizeInput = document.getElementById("logoSize");
+    const logoSizeNumber = document.getElementById("logoSizeNumber");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    let bannerImg = new Image();
+    let logoImg = new Image();
+
+    // Default logo
+    logoImg.src = logoSelect.value;
+    logoImg.onload = drawCanvas;
+
+    // Handle File Upload
+    dropArea.addEventListener("click", () => bannerUpload.click());
+    bannerUpload.addEventListener("change", (e) => handleFiles(e.target.files));
+
+    dropArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropArea.classList.add("dragover");
+    });
+
+    dropArea.addEventListener("dragleave", () => {
+      dropArea.classList.remove("dragover");
+    });
+
+    dropArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropArea.classList.remove("dragover");
+      handleFiles(e.dataTransfer.files);
+    });
+
+    function handleFiles(files) {
+      const file = files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          bannerImg = new Image();
+          bannerImg.onload = drawCanvas;
+          bannerImg.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Logo change
+    logoSelect.addEventListener("change", () => {
+      logoImg = new Image();
+      logoImg.onload = drawCanvas;
+      logoImg.src = logoSelect.value;
+    });
+
+    cornerSelect.addEventListener("change", drawCanvas);
+    whiteBgCheckbox.addEventListener("change", drawCanvas);
+
+    // Range <-> Number sync
+    logoSizeInput.addEventListener("input", () => {
+      logoSizeNumber.value = logoSizeInput.value;
+      drawCanvas();
+    });
+
+    logoSizeNumber.addEventListener("input", () => {
+      let val = parseInt(logoSizeNumber.value);
+      if (val < 100) val = 100;
+      if (val > 600) val = 600;
+      logoSizeInput.value = val;
+      drawCanvas();
+    });
+
+    // Download
+    downloadBtn.addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = "banner.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+
+    function drawCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw banner
+      if (bannerImg.src) {
+        ctx.drawImage(bannerImg, 0, 0, canvas.width, canvas.height);
+      }
+
+      // Draw logo
+      if (logoImg.src) {
+        const maxLogoWidth = parseInt(logoSizeInput.value);
+        const scale = maxLogoWidth / logoImg.width;
+        const logoWidth = logoImg.width * scale;
+        const logoHeight = logoImg.height * scale;
+        let x = 0, y = 0;
+
+        switch (cornerSelect.value) {
+          case "top-left": x = 20; y = 20; break;
+          case "top-right": x = canvas.width - logoWidth - 20; y = 20; break;
+          case "bottom-left": x = 20; y = canvas.height - logoHeight - 20; break;
+          case "bottom-right": x = canvas.width - logoWidth - 20; y = canvas.height - logoHeight - 20; break;
+          case "top-middle": x = (canvas.width / 2) - (logoWidth / 2); y = 20; break;
+        }
+
+        // White background
+        if (whiteBgCheckbox.checked) {
+          const radius = 30;
+          ctx.fillStyle = "white";
+          ctx.beginPath();
+
+          if (cornerSelect.value === "top-left") {
+            ctx.moveTo(0, 0);
+            ctx.lineTo(logoWidth + 40, 0);
+            ctx.lineTo(logoWidth + 40, logoHeight + 40 - radius);
+            ctx.quadraticCurveTo(logoWidth + 40, logoHeight + 40, logoWidth + 40 - radius, logoHeight + 40);
+            ctx.lineTo(0, logoHeight + 40);
+          }
+
+          if (cornerSelect.value === "top-right") {
+            ctx.moveTo(canvas.width, 0);
+            ctx.lineTo(canvas.width - (logoWidth + 40), 0);
+            ctx.lineTo(canvas.width - (logoWidth + 40), logoHeight + 40 - radius);
+            ctx.quadraticCurveTo(canvas.width - (logoWidth + 40), logoHeight + 40, canvas.width - (logoWidth + 40) + radius, logoHeight + 40);
+            ctx.lineTo(canvas.width, logoHeight + 40);
+          }
+
+          if (cornerSelect.value === "bottom-left") {
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(logoWidth + 40, canvas.height);
+            ctx.lineTo(logoWidth + 40, canvas.height - (logoHeight + 40) + radius);
+            ctx.quadraticCurveTo(logoWidth + 40, canvas.height - (logoHeight + 40), logoWidth + 40 - radius, canvas.height - (logoHeight + 40));
+            ctx.lineTo(0, canvas.height - (logoHeight + 40));
+          }
+
+          if (cornerSelect.value === "bottom-right") {
+            ctx.moveTo(canvas.width, canvas.height);
+            ctx.lineTo(canvas.width - (logoWidth + 40), canvas.height);
+            ctx.lineTo(canvas.width - (logoWidth + 40), canvas.height - (logoHeight + 40) + radius);
+            ctx.quadraticCurveTo(canvas.width - (logoWidth + 40), canvas.height - (logoHeight + 40), canvas.width - (logoWidth + 40) + radius, canvas.height - (logoHeight + 40));
+            ctx.lineTo(canvas.width, canvas.height - (logoHeight + 40));
+          }
+
+          if (cornerSelect.value === "top-middle") {
+            const centerX = canvas.width / 2;
+            const boxWidth = logoWidth + 40;
+            const boxHeight = logoHeight + 40;
+            const leftX = centerX - boxWidth / 2;
+            const rightX = centerX + boxWidth / 2;
+
+            ctx.moveTo(leftX, 0);
+            ctx.lineTo(rightX, 0);
+            ctx.lineTo(rightX, boxHeight - radius);
+            ctx.quadraticCurveTo(rightX, boxHeight, rightX - radius, boxHeight);
+            ctx.lineTo(leftX + radius, boxHeight);
+            ctx.quadraticCurveTo(leftX, boxHeight, leftX, boxHeight - radius);
+            ctx.lineTo(leftX, 0);
+          }
+
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.drawImage(logoImg, x, y, logoWidth, logoHeight);
+      }
+    }
+  </script>
+</body>
+</html>
