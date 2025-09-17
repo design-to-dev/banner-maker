@@ -112,7 +112,7 @@
   </style>
 </head>
 <body>
-  <h2>✨Blog Banner Maker Tool</h2>
+  <h2>✨ Banner Maker Tool</h2>
 
   <div class="controls">
     <div class="drop-area" id="dropArea">
@@ -154,15 +154,22 @@
       </div>
     </div>
 
+    <div>
+      <label>Export Quality:</label>
+      <select id="quality">
+        <option value="1.0">High</option>
+        <option value="0.7" selected>Medium</option>
+        <option value="0.4">Low</option>
+      </select>
+    </div>
+
     <button id="downloadBtn">⬇️ Download Banner</button>
   </div>
 
   <div class="canvas-container">
     <canvas id="canvas" width="2240" height="1260"></canvas>
   </div>
-  <footer style="text-align:center; margin-top:20px; color:#888; font-size:20px;">
-    Made by DMT
-  </footer>
+
   <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -175,6 +182,7 @@
     const logoSizeInput = document.getElementById("logoSize");
     const logoSizeNumber = document.getElementById("logoSizeNumber");
     const downloadBtn = document.getElementById("downloadBtn");
+    const qualitySelect = document.getElementById("quality");
 
     let bannerImg = new Image();
     let logoImg = new Image();
@@ -241,9 +249,10 @@
 
     // Download
     downloadBtn.addEventListener("click", () => {
+      const quality = parseFloat(qualitySelect.value);
       const link = document.createElement("a");
-      link.download = "banner.png";
-      link.href = canvas.toDataURL("image/png");
+      link.download = "banner.jpg";
+      link.href = canvas.toDataURL("image/jpeg", quality);
       link.click();
     });
 
